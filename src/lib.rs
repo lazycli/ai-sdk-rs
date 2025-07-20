@@ -4,11 +4,11 @@ pub mod prompt;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::prompt::prompt::{Prompt, Promptable};
 
     #[test]
     fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+        let prompt = Prompt::new("test");
+        assert_eq!(prompt.name(), "test");
     }
 }

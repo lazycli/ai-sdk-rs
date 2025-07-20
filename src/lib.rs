@@ -4,7 +4,7 @@ pub mod prompt;
 
 #[cfg(test)]
 mod tests {
-    use crate::prompt::prompt::{Prompt, Promptable};
+    use crate::prompt::{Prompt, Promptable};
 
     #[test]
     fn it_works() {

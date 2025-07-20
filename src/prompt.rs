@@ -10,7 +10,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use ai_sdk_rs::prompt::prompt::Prompt;
+//! use ai_sdk_rs::prompt::Prompt;
 //!
 //! // Prompt::new("system/base")  // loads from ./prompts/system/base.prompt
 //! //    .with_extension("txt") // optionally override the extension
@@ -20,131 +20,130 @@
 //! //    .generate()
 //! ```
 
-pub mod prompt {
-    use once_cell::sync::Lazy;
-    use std::collections::HashMap;
-    use std::env;
-    use std::path::PathBuf;
-    use tera::{Context, Tera};
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::env;
+use std::path::PathBuf;
+use tera::{Context, Tera};
 
-    // A lazy-loaded Tera instance that discovers prompt templates in the specified directory.
-    // It looks for a `PROMPT_DIR` environment variable, defaulting to `./prompts`.
-    static TERA: Lazy<Tera> = Lazy::new(|| {
-        let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
-        let glob = format!("{}/**/*.*", prompt_dir);
-        let mut tera = Tera::new(&glob).expect("Failed to initialize Tera");
-        tera.autoescape_on(vec![]);
-        tera
-    });
+// A lazy-loaded Tera instance that discovers prompt templates in the specified directory.
+// It looks for a `PROMPT_DIR` environment variable, defaulting to `./prompts`.
+static TERA: Lazy<Tera> = Lazy::new(|| {
+    let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
+    let glob = format!("{}/**/*.*", prompt_dir);
+    let mut tera = Tera::new(&glob).expect("Failed to initialize Tera");
+    tera.autoescape_on(vec!["README.md"]);
+    tera
+});
 
-    // A type alias for a HashMap that stores prompt variables.
-    type PromptVariables = HashMap<String, String>;
+// A type alias for a HashMap that stores prompt variables.
+type PromptVariables = HashMap<String, String>;
 
-    /// A trait for objects that can be used as prompt templates.
-    pub trait Promptable: Sized {
-        /// Renders the prompt template with the provided variables.
-        fn generate(&self) -> String;
-        /// Adds a variable to the prompt, if it doesn't already exist.
-        fn with(self, variable: &str, value: &str) -> Self;
-        /// Adds a variable to the prompt, overwriting it if it already exists.
-        fn with_overwrite(self, variable: &str, value: &str) -> Self;
-        /// Sets the file extension for the prompt template.
-        fn with_extension(self, extension: &str) -> Self;
-        /// Returns the file path of the prompt template.
-        fn file_path(&self) -> PathBuf;
-        /// Returns the name of the prompt.
-        fn name(&self) -> &str;
-        /// Returns the file extension of the prompt.
-        fn extension(&self) -> &str;
-        /// Returns a reference to the prompt's variables.
-        fn variables(&self) -> &PromptVariables;
-    }
+/// A trait for objects that can be used as prompt templates.
+pub trait Promptable: Sized {
+    /// Renders the prompt template with the provided variables.
+    fn generate(&self) -> String;
+    /// Adds a variable to the prompt, if it doesn't already exist.
+    fn with(self, variable: &str, value: &str) -> Self;
+    /// Adds a variable to the prompt, overwriting it if it already exists.
+    fn with_overwrite(self, variable: &str, value: &str) -> Self;
+    /// Sets the file extension for the prompt template.
+    fn with_extension(self, extension: &str) -> Self;
+    /// Returns the file path of the prompt template.
+    fn file_path(&self) -> PathBuf;
+    /// Returns the name of the prompt.
+    fn name(&self) -> &str;
+    /// Returns the file extension of the prompt.
+    fn extension(&self) -> &str;
+    /// Returns a reference to the prompt's variables.
+    fn variables(&self) -> &PromptVariables;
+}
 
-    /// A struct that represents a prompt template.
-    #[derive(Clone)]
-    pub struct Prompt {
-        // The name of the prompt, which corresponds to the template file name.
-        name: String,
-        // The file extension of the prompt template.
-        extension: String,
-        // The variables to be injected into the prompt template.
-        variables: PromptVariables,
-    }
+/// A struct that represents the default prompt template which is.
+/// a file based prompt template.
+#[derive(Clone)]
+pub struct Prompt {
+    // The name of the prompt, which corresponds to the template file name.
+    name: String,
+    // The file extension of the prompt template.
+    extension: String,
+    // The variables to be injected into the prompt template.
+    variables: PromptVariables,
+}
 
-    impl Prompt {
-        /// Creates a new `Prompt` with the given name and a default extension of "prompt".
-        pub fn new(name: &str) -> Self {
-            Prompt {
-                name: name.to_string(),
-                extension: "prompt".to_string(),
-                variables: HashMap::new(),
-            }
+impl Prompt {
+    /// Creates a new `Prompt` with the given name and a default extension of "prompt".
+    pub fn new(name: &str) -> Self {
+        Prompt {
+            name: name.to_string(),
+            extension: "prompt".to_string(),
+            variables: HashMap::new(),
         }
     }
+}
 
-    impl Promptable for Prompt {
-        /// Renders the prompt template with the provided variables.
-        fn generate(&self) -> String {
-            let context = Context::from_serialize(&self.variables)
-                .expect("Failed to create Tera context from variables");
-            let template_name = format!("{}.{}", self.name, self.extension);
-            TERA.render(&template_name, &context)
-                .expect("Failed to render prompt")
-        }
+impl Promptable for Prompt {
+    /// Renders the prompt template with the provided variables.
+    fn generate(&self) -> String {
+        let context = Context::from_serialize(&self.variables)
+            .expect("Failed to create Tera context from variables");
+        let template_name = format!("{}.{}", self.name, self.extension);
+        TERA.render(&template_name, &context)
+            .expect("Failed to render prompt")
+    }
 
-        /// Adds a variable to the prompt, if it doesn't already exist.
-        fn with(mut self, variable: &str, value: &str) -> Self {
-            if !self.variables.contains_key(variable) {
-                self.variables
-                    .insert(variable.to_string(), value.to_string());
-            } else {
-                log::warn!(
-                    "Overriding an already set variable {variable}, please consider using `with_overwrite` "
-                );
-            }
-            self
-        }
-
-        /// Adds a variable to the prompt, overwriting it if it already exists.
-        fn with_overwrite(mut self, variable: &str, value: &str) -> Self {
+    /// Adds a variable to the prompt, if it doesn't already exist.
+    fn with(mut self, variable: &str, value: &str) -> Self {
+        if !self.variables.contains_key(variable) {
             self.variables
                 .insert(variable.to_string(), value.to_string());
-            self
+        } else {
+            log::warn!(
+                "Overriding an already set variable {variable}, please consider using `with_overwrite` "
+            );
         }
+        self
+    }
 
-        /// Sets the file extension for the prompt template.
-        fn with_extension(mut self, extension: &str) -> Self {
-            self.extension = extension.to_string();
-            self
-        }
+    /// Adds a variable to the prompt, overwriting it if it already exists.
+    fn with_overwrite(mut self, variable: &str, value: &str) -> Self {
+        self.variables
+            .insert(variable.to_string(), value.to_string());
+        self
+    }
 
-        /// Returns the file path of the prompt template.
-        fn file_path(&self) -> PathBuf {
-            let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
-            let file_name = format!("{}.{}", self.name, self.extension);
-            PathBuf::from(prompt_dir).join(file_name)
-        }
+    /// Sets the file extension for the prompt template.
+    fn with_extension(mut self, extension: &str) -> Self {
+        self.extension = extension.to_string();
+        self
+    }
 
-        /// Returns the name of the prompt.
-        fn name(&self) -> &str {
-            &self.name
-        }
+    /// Returns the file path of the prompt template.
+    fn file_path(&self) -> PathBuf {
+        let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
+        let file_name = format!("{}.{}", self.name, self.extension);
+        PathBuf::from(prompt_dir).join(file_name)
+    }
 
-        /// Returns the file extension of the prompt.
-        fn extension(&self) -> &str {
-            &self.extension
-        }
+    /// Returns the name of the prompt.
+    fn name(&self) -> &str {
+        &self.name
+    }
 
-        /// Returns a reference to the prompt's variables.
-        fn variables(&self) -> &PromptVariables {
-            &self.variables
-        }
+    /// Returns the file extension of the prompt.
+    fn extension(&self) -> &str {
+        &self.extension
+    }
+
+    /// Returns a reference to the prompt's variables.
+    fn variables(&self) -> &PromptVariables {
+        &self.variables
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::prompt::{Prompt, Promptable};
+    use crate::prompt::{Prompt, Promptable};
     use std::env;
     use std::fs;
     use std::path::PathBuf;

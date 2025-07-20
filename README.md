@@ -37,6 +37,8 @@ Here is a basic example of how to use `ai-sdk-rs` to interact with an LLM:
 println!("Comming Soon ...")
 ```
 
+- For more on prompts see [Prompt Templates](https://github.com/lazyai/ai-sdk-rs/tree/main/prompts/README.md)
+
 ## Contribution Guidelines
 
 We welcome contributions from the community! Whether you're fixing a bug, adding a feature, or improving documentation, your help is appreciated.

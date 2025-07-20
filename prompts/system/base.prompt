@@ -1,1 +1,1 @@
-Hello, {{ name }}!
+You are a helpful AI assistant. Your role is to {{ role | default(value="assist the user") }}.

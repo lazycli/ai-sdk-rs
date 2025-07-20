@@ -1,0 +1,12 @@
+Generate a {{ language }} function that {{ description }}.
+
+{% if language == "python" %}
+def {{ function_name }}({{ params }}):
+    # Your code here
+{% elif language == "rust" %}
+fn {{ function_name }}({{ params }}) {
+    // Your code here
+}
+{% else %}
+// Code for {{ language }} here
+{% endif %}

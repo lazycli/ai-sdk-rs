@@ -1,0 +1,9 @@
+Answer the question based on the provided context. If the answer is not in the context, say "I don't know."
+
+Context:
+{% for item in context %}
+- {{ item }}
+{% endfor %}
+
+Q: {{ question }}
+A: 

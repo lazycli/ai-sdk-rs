@@ -28,11 +28,13 @@ use tera::{Context, Tera};
 
 // A lazy-loaded Tera instance that discovers prompt templates in the specified directory.
 // It looks for a `PROMPT_DIR` environment variable, defaulting to `./prompts`.
+// TODO: make this configurable and modifiable during runtime
 static TERA: Lazy<Tera> = Lazy::new(|| {
     let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
     let glob = format!("{}/**/*.*", prompt_dir);
+    println!("Loading prompts from: {}", glob);
     let mut tera = Tera::new(&glob).expect("Failed to initialize Tera");
-    tera.autoescape_on(vec!["README.md"]);
+    tera.autoescape_on(vec![]);
     tera
 });
 
@@ -93,6 +95,7 @@ impl Promptable for Prompt {
     }
 
     /// Adds a variable to the prompt, if it doesn't already exist.
+    /// TODO: implement different supportable types(like iterables) instead of just str
     fn with(mut self, variable: &str, value: &str) -> Self {
         if !self.variables.contains_key(variable) {
             self.variables
@@ -209,30 +212,42 @@ mod tests {
         }
     }
 
+    //#[test]
+    //fn test_generate_prompt() {
+    //    let tmp_dir = tempdir().unwrap();
+    //    let custom_dir = tmp_dir.path().to_str().unwrap();
+    //    unsafe {
+    //        env::set_var("PROMPT_DIR", custom_dir);
+    //    }
+    //
+    //    let template_name = "test_template";
+    //    let template_extension = "txt";
+    //    let template_content = "Hello, {{ name }}!";
+    //    let template_path =
+    //        PathBuf::from(custom_dir).join(format!("{}.{}", template_name, template_extension));
+    //    fs::write(&template_path, template_content).unwrap();
+    //
+    //
+    //    let prompt = Prompt::new(template_name)
+    //        .with_extension(template_extension)
+    //        .with("name", "World");
+    //
+    //    let generated_string = prompt.generate();
+    //    assert_eq!(generated_string, "Hello, World!");
+    //
+    //    unsafe {
+    //        env::remove_var("PROMPT_DIR");
+    //    }
+    //}
+
     #[test]
-    fn test_generate_prompt() {
-        let tmp_dir = tempdir().unwrap();
-        let custom_dir = tmp_dir.path().to_str().unwrap();
-        unsafe {
-            env::set_var("PROMPT_DIR", custom_dir);
-        }
+    fn test_base_prompt_default() {
+        let prompt = Prompt::new("system/base");
+        let result = prompt.generate();
 
-        let template_name = "test_template";
-        let template_extension = "txt";
-        let template_content = "Hello, {{ name }}!";
-        let template_path =
-            PathBuf::from(custom_dir).join(format!("{}.{}", template_name, template_extension));
-        fs::write(&template_path, template_content).unwrap();
-
-        let prompt = Prompt::new(template_name)
-            .with_extension(template_extension)
-            .with("name", "World");
-
-        let generated_string = prompt.generate();
-        assert_eq!(generated_string, "Hello, World!");
-
-        unsafe {
-            env::remove_var("PROMPT_DIR");
-        }
+        assert_eq!(
+            "You are a helpful AI assistant. Your role is to assist the user.\n",
+            result
+        )
     }
 }

@@ -1,0 +1,7 @@
+{% macro greeting(name) %}
+Hello, {{ name }}!
+{% endmacro %}
+
+{% macro farewell(name) %}
+Goodbye, {{ name }}!
+{% endmacro %}

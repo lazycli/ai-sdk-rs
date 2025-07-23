@@ -10,7 +10,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use ai_sdk_rs::prompt::Prompt;
+//! // use ai_sdk_rs::prompt::Prompt;
 //!
 //! // Prompt::new("system/base")  // loads from ./prompts/system/base.prompt
 //! //    .with_extension("txt") // optionally override the extension
@@ -20,23 +20,43 @@
 //! //    .generate()
 //! ```
 
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use tera::{Context, Tera};
 
-// A lazy-loaded Tera instance that discovers prompt templates in the specified directory.
-// It looks for a `PROMPT_DIR` environment variable, defaulting to `./prompts`.
-// TODO: make this configurable and modifiable during runtime
-static TERA: Lazy<Tera> = Lazy::new(|| {
-    let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
-    let glob = format!("{}/**/*.*", prompt_dir);
-    println!("Loading prompts from: {}", glob);
-    let mut tera = Tera::new(&glob).expect("Failed to initialize Tera");
-    tera.autoescape_on(vec![]);
-    tera
-});
+/// Represents the environment for prompt management.
+/// It contains the Tera instance for template rendering and can be configured.
+#[derive(Clone)]
+pub struct PromptEnvironment {
+    tera: Tera,
+    prompt_dir: PathBuf,
+}
+
+impl PromptEnvironment {
+    /// Creates a new `PromptEnvironment` by discovering templates in the default directory,
+    /// which is determined by the `PROMPT_DIR` environment variable or defaults to `./prompts`.
+    pub fn new() -> Self {
+        let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
+        Self::from_directory(&prompt_dir)
+    }
+
+    /// Creates a new `PromptEnvironment` from a specific directory path.
+    pub fn from_directory(prompt_dir_str: &str) -> Self {
+        let prompt_dir = PathBuf::from(prompt_dir_str);
+        let glob = format!("{}/**/*.*", prompt_dir_str);
+        log::debug!("Loading prompts from: {}", glob);
+        let mut tera = Tera::new(&glob).expect("Failed to initialize Tera");
+        tera.autoescape_on(vec![]);
+        Self { tera, prompt_dir }
+    }
+}
+
+impl Default for PromptEnvironment {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 // A type alias for a HashMap that stores prompt variables.
 type PromptVariables = HashMap<String, String>;
@@ -71,15 +91,29 @@ pub struct Prompt {
     extension: String,
     // The variables to be injected into the prompt template.
     variables: PromptVariables,
+    // The environment for the prompt. holds configuration details.
+    env: PromptEnvironment,
 }
 
 impl Prompt {
     /// Creates a new `Prompt` with the given name and a default extension of "prompt".
+    /// It initializes a default `PromptEnvironment`.
     pub fn new(name: &str) -> Self {
         Prompt {
             name: name.to_string(),
             extension: "prompt".to_string(),
             variables: HashMap::new(),
+            env: PromptEnvironment::default(),
+        }
+    }
+
+    /// Creates a new `Prompt` with the given name and environment.
+    pub fn new_with_env(name: &str, env: PromptEnvironment) -> Self {
+        Prompt {
+            name: name.to_string(),
+            extension: "prompt".to_string(),
+            variables: HashMap::new(),
+            env,
         }
     }
 }
@@ -90,7 +124,9 @@ impl Promptable for Prompt {
         let context = Context::from_serialize(&self.variables)
             .expect("Failed to create Tera context from variables");
         let template_name = format!("{}.{}", self.name, self.extension);
-        TERA.render(&template_name, &context)
+        self.env
+            .tera
+            .render(&template_name, &context)
             .expect("Failed to render prompt")
     }
 
@@ -123,9 +159,8 @@ impl Promptable for Prompt {
 
     /// Returns the file path of the prompt template.
     fn file_path(&self) -> PathBuf {
-        let prompt_dir = env::var("PROMPT_DIR").unwrap_or_else(|_| "./prompts".to_string());
         let file_name = format!("{}.{}", self.name, self.extension);
-        PathBuf::from(prompt_dir).join(file_name)
+        self.env.prompt_dir.join(file_name)
     }
 
     /// Returns the name of the prompt.
@@ -146,7 +181,7 @@ impl Promptable for Prompt {
 
 #[cfg(test)]
 mod tests {
-    use crate::prompt::{Prompt, Promptable};
+    use super::*;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -191,7 +226,9 @@ mod tests {
     #[test]
     fn test_file_path() {
         // Unset PROMPT_DIR to test default
-        unsafe { env::remove_var("PROMPT_DIR") };
+        unsafe {
+            env::remove_var("PROMPT_DIR");
+        }
         let prompt = Prompt::new("system/test").with_extension("md");
         let path = prompt.file_path();
         assert!(path.ends_with("prompts/system/test.md"));
@@ -212,33 +249,21 @@ mod tests {
         }
     }
 
-    //#[test]
-    //fn test_generate_prompt() {
-    //    let tmp_dir = tempdir().unwrap();
-    //    let custom_dir = tmp_dir.path().to_str().unwrap();
-    //    unsafe {
-    //        env::set_var("PROMPT_DIR", custom_dir);
-    //    }
-    //
-    //    let template_name = "test_template";
-    //    let template_extension = "txt";
-    //    let template_content = "Hello, {{ name }}!";
-    //    let template_path =
-    //        PathBuf::from(custom_dir).join(format!("{}.{}", template_name, template_extension));
-    //    fs::write(&template_path, template_content).unwrap();
-    //
-    //
-    //    let prompt = Prompt::new(template_name)
-    //        .with_extension(template_extension)
-    //        .with("name", "World");
-    //
-    //    let generated_string = prompt.generate();
-    //    assert_eq!(generated_string, "Hello, World!");
-    //
-    //    unsafe {
-    //        env::remove_var("PROMPT_DIR");
-    //    }
-    //}
+    #[test]
+    fn test_generate_prompt_with_custom_env() {
+        let tmp_dir = tempdir().unwrap();
+        let custom_dir = tmp_dir.path();
+        let template_path = custom_dir.join("test_template.txt");
+        fs::write(&template_path, "Hello, {{ name }}!").unwrap();
+
+        let env = PromptEnvironment::from_directory(custom_dir.to_str().unwrap());
+        let prompt = Prompt::new_with_env("test_template", env)
+            .with_extension("txt")
+            .with("name", "World");
+
+        let generated_string = prompt.generate();
+        assert_eq!(generated_string, "Hello, World!");
+    }
 
     #[test]
     fn test_base_prompt_default() {
@@ -251,3 +276,4 @@ mod tests {
         )
     }
 }
+

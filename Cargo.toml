@@ -7,6 +7,10 @@ edition = "2024"
 tera = "1"
 once_cell = "1.19.0"
 log = "0.4"
+async-trait = "0.1.88"
+serde = {version = "1.0.219", features = ["derive"]}
+thiserror = "2.0.12"
+derive_builder = "0.20.2"
 
 [dev-dependencies]
 tempfile = "3.10.1"

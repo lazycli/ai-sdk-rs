@@ -44,8 +44,8 @@ impl PromptEnvironment {
     /// Creates a new `PromptEnvironment` from a specific directory path.
     pub fn from_directory(prompt_dir_str: &str) -> Self {
         let prompt_dir = PathBuf::from(prompt_dir_str);
-        let glob = format!("{}/**/*.*", prompt_dir_str);
-        log::debug!("Loading prompts from: {}", glob);
+        let glob = format!("{prompt_dir_str}/**/*.*");
+        log::debug!("Loading prompts from: {glob}");
         let mut tera = Tera::new(&glob).expect("Failed to initialize Tera");
         tera.autoescape_on(vec![]);
         Self { tera, prompt_dir }
@@ -276,4 +276,3 @@ mod tests {
         )
     }
 }
-

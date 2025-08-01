@@ -37,4 +37,3 @@ pub trait LanguageModel: Send + Sync + std::fmt::Debug {
     /// Returns an `Error` if the API call fails or the request is invalid.
     async fn generate(&self, options: LanguageModelCallOptions) -> Result<LanguageModelResponse>;
 }
-

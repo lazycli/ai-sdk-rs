@@ -26,6 +26,14 @@ pub enum Error {
     #[error("A required field is missing: {0}")]
     MissingField(String),
 
+    /// An error returned from the API.
+    #[error("API error: {0}")]
+    ApiError(String),
+
+    /// An error from the underlying `reqwest` client.
+    #[error("HTTP request error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
+
     /// A catch-all for other miscellaneous errors.
     #[error("AI SDK error: {0}")]
     Other(String),

@@ -26,8 +26,11 @@ impl OpenAIClient {
     }
 
     /// Sends a request to the OpenAI API to generate text.
-    pub async fn generate_text(&self, request: &ChatCompletionRequest) -> Result<ChatCompletionResponse> {
-        let url = format!("{}/chat/completions", API_BASE_URL);
+    pub async fn generate_text(
+        &self,
+        request: &ChatCompletionRequest,
+    ) -> Result<ChatCompletionResponse> {
+        let url = format!("{API_BASE_URL}/chat/completions");
         let response = self
             .client
             .post(&url)

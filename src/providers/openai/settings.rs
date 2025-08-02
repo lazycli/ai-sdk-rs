@@ -11,15 +11,15 @@ use crate::error::Error;
 #[builder(pattern = "owned", setter(into), build_fn(error = "Error"))]
 pub struct OpenAIProviderSettings {
     /// The API key for the OpenAI API.
-    #[builder(default = "std::env::var(\"OPENAI_API_KEY\").unwrap_or_default()") ]
+    #[builder(default = "std::env::var(\"OPENAI_API_KEY\").unwrap_or_default()")]
     pub api_key: String,
 
     /// The model to use for text generation.
-    #[builder(default = "\"gpt-4o\".to_string()") ]
+    #[builder(default = "\"gpt-4o\".to_string()")]
     pub model_name: String,
 
     /// The name of the provider.
-    #[builder(default = "\"openai\".to_string()") ]
+    #[builder(default = "\"openai\".to_string()")]
     pub provider_name: String,
 
     /// The maximum number of tokens to generate.

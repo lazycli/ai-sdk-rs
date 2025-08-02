@@ -4,8 +4,6 @@
 //! main entry point for consumers of the SDK to generate text using any
 //! model that implements the `LanguageModel` trait.
 
-use serde::Serialize;
-
 use crate::{
     core::{
         language_model::LanguageModel,
@@ -23,18 +21,19 @@ use crate::{
 ///
 /// # Arguments
 ///
+/// * `model` - A language model that implements the `LanguageModel` trait.
+///
 /// * `options` - A `GenerateTextCallOptions` struct containing the model, prompt,
 ///   and other parameters for the request.
 ///
 /// # Errors
 ///
 /// Returns an `Error` if the underlying model fails to generate a response.
-pub async fn generate_text<LM>(options: GenerateTextCallOptions<LM>) -> Result<GenerateTextResponse>
-where
-    LM: LanguageModel + Serialize + Clone,
-{
-    let response = options
-        .model
+pub async fn generate_text(
+    model: impl LanguageModel,
+    options: GenerateTextCallOptions,
+) -> Result<GenerateTextResponse> {
+    let response = model
         .generate(
             LanguageModelCallOptions::builder()
                 .prompt(options.prompt)

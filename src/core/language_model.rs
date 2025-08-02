@@ -21,12 +21,12 @@ pub trait LanguageModel: Send + Sync + std::fmt::Debug {
     /// Returns the identifier of the model (e.g., "gpt-4o", "claude-3-sonnet").
     ///
     /// This is used for identifying which model is being used in requests and responses.
-    fn model_name(&self) -> String;
+    fn model_name(&self) -> &str;
 
     /// Returns the name of the provider (e.g., "openai", "anthropic").
     ///
     /// This helps differentiate between models with similar names from different services.
-    fn provider_name(&self) -> String;
+    fn provider_name(&self) -> &str;
 
     /// Performs a single, non-streaming text generation request.
     ///

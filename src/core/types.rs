@@ -3,27 +3,19 @@
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
-use crate::{core::language_model::LanguageModel, error::Error};
+use crate::error::Error;
 
 /// Options for a `generate_text` call.
 #[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 #[builder(pattern = "owned", setter(into), build_fn(error = "Error"))]
-pub struct GenerateTextCallOptions<LM>
-where
-    LM: LanguageModel + Serialize + Clone,
-{
-    /// The language model to use for text generation.
-    pub model: LM,
+pub struct GenerateTextCallOptions {
     /// The prompt to generate text from.
     pub prompt: String,
 }
 
-impl<LM> GenerateTextCallOptions<LM>
-where
-    LM: LanguageModel + Serialize + Clone,
-{
+impl GenerateTextCallOptions {
     /// Creates a new builder for `GenerateTextCallOptions`.
-    pub fn builder() -> GenerateTextCallOptionsBuilder<LM> {
+    pub fn builder() -> GenerateTextCallOptionsBuilder {
         GenerateTextCallOptionsBuilder::default()
     }
 }

@@ -21,8 +21,7 @@ async fn test_generate_text_with_openai() {
 
     let openai = OpenAI::new(settings);
 
-    let options = GenerateTextCallOptions::<OpenAI>::builder()
-        .model(openai)
+    let options = GenerateTextCallOptions::builder()
         .prompt(
             "Respond with exactly the word 'hello' in all lowercase.\n 
                 Do not include any punctuation, prefixes, or suffixes.",
@@ -30,7 +29,7 @@ async fn test_generate_text_with_openai() {
         .build()
         .expect("Failed to build GenerateTextCallOptions");
 
-    let result = generate_text(options).await;
+    let result = generate_text(openai, options).await;
     assert!(result.is_ok());
 
     let text = result.as_ref().expect("Failed to get result").text.trim();

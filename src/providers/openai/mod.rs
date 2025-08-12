@@ -1,12 +1,17 @@
 //! This module provides the OpenAI provider, which implements the `LanguageModel`
 //! and `Provider` traits for interacting with the OpenAI API.
 
-pub mod client;
 pub mod settings;
 
+use async_openai::types::{
+    ChatCompletionRequestMessage, ChatCompletionRequestUserMessage,
+    ChatCompletionRequestUserMessageContent, ChatCompletionRequestUserMessageContentPart,
+    CreateChatCompletionRequestArgs,
+};
+use async_openai::{Client, config::OpenAIConfig};
 pub use settings::OpenAIProviderSettings;
 
-use self::client::{ChatCompletionRequest, Message, OpenAIClient};
+//use self::client::{ChatCompletionRequest, Message};
 use crate::{
     core::{
         language_model::LanguageModel,
@@ -19,18 +24,45 @@ use async_trait::async_trait;
 use serde::Serialize;
 
 /// The OpenAI provider.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct OpenAI {
     #[serde(skip)]
-    client: OpenAIClient,
+    client: Client<OpenAIConfig>,
     settings: OpenAIProviderSettings,
 }
 
 impl OpenAI {
     /// Creates a new `OpenAI` provider with the given settings.
     pub fn new(settings: OpenAIProviderSettings) -> Self {
-        let client = OpenAIClient::new(settings.api_key.to_string());
+        let client =
+            Client::with_config(OpenAIConfig::new().with_api_key(settings.api_key.to_string()));
+
         Self { client, settings }
+    }
+
+    fn user_message(message: &str) -> ChatCompletionRequestMessage {
+        ChatCompletionRequestMessage::User(ChatCompletionRequestUserMessage::from(message))
+    }
+}
+
+struct OpenAiMessage(ChatCompletionRequestMessage);
+
+impl From<OpenAiMessage> for String {
+    /// Handle the conversion from any `OpenAiMessage` to `String`. Currently it only handles
+    /// user messages that are texts or part of a text. returns empty string if it is not.
+    fn from(value: OpenAiMessage) -> Self {
+        match value.0 {
+            ChatCompletionRequestMessage::User(user_message) => match &user_message.content {
+                ChatCompletionRequestUserMessageContent::Text(text) => text.to_string(),
+                ChatCompletionRequestUserMessageContent::Array(arr) => match arr.first().unwrap() {
+                    ChatCompletionRequestUserMessageContentPart::Text(text) => {
+                        text.text.to_string()
+                    }
+                    _ => "".to_string(),
+                },
+            },
+            _ => "".to_string(),
+        }
     }
 }
 
@@ -46,22 +78,26 @@ impl LanguageModel for OpenAI {
         &self.settings.model_name
     }
 
-    async fn generate(&self, options: LanguageModelCallOptions) -> Result<LanguageModelResponse> {
-        let request = ChatCompletionRequest {
-            model: self.model_name().to_string(),
-            // TODO: support multiple messages
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: options.prompt,
-            }],
-            max_tokens: self.settings.max_tokens,
+    async fn generate(
+        &mut self,
+        options: LanguageModelCallOptions,
+    ) -> Result<LanguageModelResponse> {
+        let openai_msg: ChatCompletionRequestMessage =
+            OpenAiMessage(OpenAI::user_message(&options.prompt)).0;
+        let request = CreateChatCompletionRequestArgs::default()
+            .model(self.model_name().to_string())
+            .messages(vec![openai_msg])
+            .build()?;
+
+        let response = self.client.chat().create(request).await?;
+        let text = match response.choices.first() {
+            Some(choice) => &choice.message.content.clone().expect("no content"),
+            None => "",
         };
 
-        let response = self.client.generate_text(&request).await?;
-
         Ok(LanguageModelResponse {
-            text: response.choices[0].message.content.to_string(),
             model: Some(response.model),
+            text: text.to_string(),
         })
     }
 }

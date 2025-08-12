@@ -4,9 +4,12 @@ use ai_sdk_rs::{
     core::{GenerateTextCallOptions, generate_text},
     providers::openai::{OpenAI, OpenAIProviderSettings},
 };
+use dotenv::dotenv;
 
 #[tokio::test]
 async fn test_generate_text_with_openai() {
+    dotenv().ok();
+
     // This test requires a valid OpenAI API key to be set in the environment.
     if std::env::var("OPENAI_API_KEY").is_err() {
         println!("Skipping test: OPENAI_API_KEY not set");
